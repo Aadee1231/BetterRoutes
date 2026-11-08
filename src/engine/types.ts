@@ -17,6 +17,7 @@ export interface WeightedOutcome {
 export interface Candidate {
   readonly action: Action; readonly concept: Concept;
   readonly success: Metric; readonly conversion: Metric; readonly yards: Metric;
+  readonly primaryMetric: { readonly label: string; readonly metric: Metric };
   readonly risk: 'low' | 'med' | 'high'; readonly riskValue: number; readonly riskSource: Provenance;
   readonly evidence: { readonly n: number; readonly opponentN: number; readonly weightedN: number; readonly observedRate: Metric | null; readonly prior: Metric; readonly weight: Metric };
   readonly utility: number; readonly utilitySource: Provenance; readonly expectedPoints: Metric;

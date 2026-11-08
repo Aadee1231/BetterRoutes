@@ -36,7 +36,9 @@ export const puntNet = (yardline:number) => Math.max(0,Math.min(PRIORS.punt.valu
 function estimate(action:Action,s:GameSituation,evidence:Evidence): Omit<Candidate,'concept'|'utility'|'utilitySource'|'expectedPoints'|'explanation'> {
   if (action==='PUNT'||action==='FIELD_GOAL') {
     const probability=action==='PUNT'?1:fieldGoalChance(s.yardline);
-    return {action,success:percent(probability,'assumed'),conversion:percent(0,'assumed'),yards:yardsMetric(action==='PUNT'?puntNet(s.yardline):0,'assumed'),
+    const yards=yardsMetric(action==='PUNT'?puntNet(s.yardline):0,'assumed');
+    return {action,success:{value:probability,display:'n/a',source:'assumed'},conversion:{value:0,display:'n/a',source:'assumed'},yards,
+      primaryMetric:action==='PUNT'?{label:'Net punt (assumed)',metric:yards}:{label:'Make chance (assumed)',metric:percent(probability,'assumed')},
       risk:'med',riskValue:action==='PUNT'?0.1:1-probability,riskSource:'assumed',
       evidence:{n:0,opponentN:0,weightedN:0,observedRate:null,prior:percent(probability,'assumed'),weight:percent(0,'calculated')},distribution:[]};
   }
@@ -61,7 +63,8 @@ function estimate(action:Action,s:GameSituation,evidence:Evidence): Omit<Candida
   const sack=distribution.filter(o=>o.kind==='sack').reduce((sum,o)=>sum+o.probability,0);
   const r=PRIORS.risk.value;
   const riskValue=Math.min(1,variance/r.varianceScale+turnover*r.turnoverWeight+sack*r.sackWeight);
-  return {action,success:percent((observedSuccess+k*priorSuccess)/(weightedN+k)),conversion:percent((conversionSuccess+k*priorConversion)/(weightedN+k)),
+  const success=percent((observedSuccess+k*priorSuccess)/(weightedN+k));
+  return {action,success,primaryMetric:{label:'Estimated success',metric:success},conversion:percent((conversionSuccess+k*priorConversion)/(weightedN+k)),
     yards:yardsMetric(mean),risk:riskValue>=r.high?'high':riskValue>=r.medium?'med':'low',riskValue,riskSource:'calculated',
     evidence:{n,opponentN,weightedN,observedRate:weightedN?percent(observedSuccess/weightedN,'observed'):null,prior:percent(priorSuccess,'assumed'),weight:percent(weightedN/(weightedN+k))},distribution};
 }
@@ -85,7 +88,8 @@ export function recommend(input:GameSituation,strategy:Strategy,evidence:Evidenc
     if (!trailing&&s.quarter===4&&kick) utility+=PRIORS.situation.value.leadProtection;
     if (s.yardline>=80&&!kick) utility+=PRIORS.situation.value.redZoneBoost*scoringChance;
     const concept=pickConcept(action,s,strategy);
-    const explanation=`${action} / ${concept}: ${c.success.display} ${action==='FIELD_GOAL'?'make':'success'}, ${c.conversion.display} conversion, ${c.yards.display}, ${c.risk} risk; ${c.evidence.n} NC State + ${c.evidence.opponentN} downweighted opponent samples; utility ${utility.toFixed(2)} (heuristic).`;
+    const metrics=kick?`${c.primaryMetric.label}: ${c.primaryMetric.metric.display}`:`${c.success.display} success, ${c.conversion.display} conversion, ${c.yards.display}`;
+    const explanation=`${action} / ${concept}: ${metrics}, ${c.risk} risk; ${c.evidence.n} NC State + ${c.evidence.opponentN} downweighted opponent samples; utility ${utility.toFixed(2)} (heuristic).`;
     return {...c,concept,utility,utilitySource:'assumed' as const,expectedPoints:{value:ep,display:`~${Math.round(ep)} EP-ish`,source:'assumed' as const},explanation};
   }).sort((a,b)=>b.utility-a.utility);
   const selected=ranked[0];

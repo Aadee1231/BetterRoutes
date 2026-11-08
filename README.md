@@ -3,7 +3,7 @@
 **Football Offensive Intelligence & Decision Analysis**
 Analyze the game. Challenge the call.
 
-React + TypeScript + Vite foundation, verified local game data, repeatable ingestion, a statistical recommendation engine and a seeded immutable drive simulator. The review, coordinator and simulator interfaces are not implemented yet. This is a Data-Assisted Coordinator project, not a trained ML model.
+React + TypeScript + Vite application with verified local game data, repeatable ingestion, an interactive Game Review, a statistical recommendation engine and a seeded immutable drive simulator. Coordinator and What-If screens are explicitly labeled placeholders for the next stage. This is a Data-Assisted Coordinator project, not a trained ML model.
 
 ## Commands
 
@@ -19,6 +19,12 @@ npm run ingest -- --offline # rebuilds JSON using committed raw HTML; no network
 ```
 
 The browser uses `src/data/index.ts`, which runtime-validates the local JSON with Zod. No credentials or remote requests are needed to launch the app. The ingestion parser and Cheerio are development-only and are not imported by React. Shared schemas/types are in `src/types/`; source parsing is in `scripts/parser.ts`, independent from rendering. `src/data/integrity.ts` compares play-derived totals against both official team tables.
+
+## Game Review workspace
+
+Hash routes require no server routing configuration. Open `#/review?drive=drive-13&play=drive-13-row-07` to restore the real fourth-and-one selection. Drive rows, play rows and Key Decisions select the replay; left/right arrows step through the selected drive. Analyze This Play carries the source play ID into the Coordinator placeholder.
+
+The SVG field animates official start-to-end ball progression, not reconstructed player tracking. Play/pause, replay, reset and 0.5×/1×/2× controls are local. The field and situation strip form a self-contained responsive block. All 11 schematic playbook templates are reusable data in `src/components/plays/templates.ts`; any displayed template is stamped as an illustration. Historical panels link to the official source. IBM Plex fonts are self-hosted through Fontsource.
 
 ## Source coverage and conventions
 
@@ -59,7 +65,7 @@ Samples are bucketed into downs 1–2 versus 3–4 and distances ≤3, 4–6, 7+
 
 Every heuristic constant is tagged `source: 'assumption'` in `src/engine/priors.ts`. Generic priors cover turnovers, sacks, incompletions, losses and short/medium/explosive gains. They are not measured season rates. Shrinkage is an exploratory statistical baseline, not causal inference or trained ML. Missing evidence uses priors only. Display probabilities are rounded to 5%, yards to integers; internal calculation retains precision.
 
-Utility combines success, expected yards, variance/turnover/sack risk, explosive rate and score/quarter/field-position terms. Strategy changes real weights and fourth-down willingness. Fourth-down comparisons add an assumed field-value/expected-points-ish heuristic, not a validated EP model. Punts and FG are legal only on fourth down. FG distance is yards to goal + 17, maximum 60; a generic declining distance curve estimates make probability. Punt net is assumed 38 yards capped at the opponent 20; punts inside opponent 35 are only available in conservative mode. Kicking success does not mean a first-down conversion.
+Utility combines success, expected yards, variance/turnover/sack risk, explosive rate and score/quarter/field-position terms. Strategy changes real weights and fourth-down willingness. Fourth-down comparisons add an assumed field-value/expected-points-ish heuristic, not a validated EP model. Punts and FG are legal only on fourth down. FG distance is yards to goal + 17, maximum 60; a generic declining distance curve estimates make probability. Punt net is assumed 38 yards capped at the opponent 20; punts inside opponent 35 are only available in conservative mode. Kick success/conversion displays are `n/a`; render `primaryMetric` instead: assumed net punt yards or assumed field-goal make chance. Internal probabilities remain available for simulation and ranking.
 
 ### Simulation assumptions
 

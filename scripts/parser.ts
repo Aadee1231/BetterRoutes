@@ -107,7 +107,7 @@ export function parseGame(html: string, verificationHtml: string): Game {
       const counts = !nullified && !['drive-start','timeout','period','penalty','no-play'].includes(playType);
       const offensivePlay = counts && ['rush','pass','sack','kneel'].includes(playType);
       const field = situation ? yardline(situation[3],drive.offensiveTeam) : null;
-      const prior = scoring.filter(s=>s.quarter<quarter || (s.quarter===quarter && s.clock>clock)).at(-1);
+      const prior = scoring.filter(s=>s.quarter<quarter || (s.quarter===quarter && (s.clock>clock||(s.clock===clock&&s.team!==drive.offensiveTeam&&playType!=='fg')))).at(-1);
       let scoreBefore = prior?.score ?? {NCS:0,DUK:0};
       if (playType==='kickoff' || playType==='pat' || playType==='period') {
         const same = scoring.find(s=>s.quarter===quarter && s.clock===clock);

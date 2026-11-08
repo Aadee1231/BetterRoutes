@@ -54,10 +54,28 @@ describe('statistical coordinator',()=>{
   it('rounds all displayed probabilities to 5% without fabricated decimal precision',()=>{
     for (const c of recommend(situation,'balanced',evidence).ranked) {
       for (const m of [c.success,c.conversion,c.evidence.prior,c.evidence.weight,c.evidence.observedRate].filter(m=>m!==null)) {
+        if (m.display==='n/a') continue;
         expect(m.display).toMatch(/^~\d+%$/);expect(Number(m.display.slice(1,-1))%5).toBe(0);
       }
       expect(Number.isInteger(c.yards.value)).toBe(true);
     }
+  });
+  it('never displays punt success or kick conversion percentages',()=>{
+    const r=recommend({...situation,yardline:65},'conservative',evidence);
+    const punt=r.ranked.find(c=>c.action==='PUNT')!;
+    const fg=r.ranked.find(c=>c.action==='FIELD_GOAL')!;
+    expect(punt.success.display).toBe('n/a');
+    for (const kick of [punt,fg]) {
+      expect(kick.success.display).toBe('n/a');
+      expect(kick.conversion.display).toBe('n/a');
+      expect(kick.explanation).not.toMatch(/success|conversion/);
+      expect(kick.primaryMetric.metric.source).toBe('assumed');
+    }
+    expect(punt.primaryMetric.label).toBe('Net punt (assumed)');
+    expect(fg.primaryMetric.label).toBe('Make chance (assumed)');
+    const shortFg=recommend({...situation,yardline:99},'conservative',{plays:[]}).ranked.find(c=>c.action==='FIELD_GOAL')!;
+    expect(shortFg.success.display).toBe('n/a');
+    expect(shortFg.primaryMetric.label).toBe('Make chance (assumed)');
   });
   it('explains actual inputs and the top-ranked category without concept-level statistical claims',()=>{
     const r=recommend(situation,'aggressive',evidence);

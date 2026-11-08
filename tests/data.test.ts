@@ -34,6 +34,7 @@ describe('official game dataset',()=>{
     expect(plays.find(p=>p.quarter===3&&p.down===4&&p.distance===1&&p.yardline===40)).toMatchObject({yards:0,result:'turnover-on-downs',scoreBefore:{NCS:3,DUK:31}});
     expect(plays.find(p=>p.result==='blocked-fg-return-touchdown')).toMatchObject({playType:'fg',scoreBefore:{NCS:3,DUK:24}});
     expect(game.scoring.find(s=>s.description.includes('blocked field goal return'))).toMatchObject({quarter:2,clock:'00:00',score:{NCS:3,DUK:31}});
+    expect(plays.find(p=>p.id==='drive-02-row-02')).toMatchObject({clock:'14:12',scoreBefore:{NCS:0,DUK:7}});
   });
   it('retains nullified rows but excludes them from offensive totals and accounts for sacks as rushes',()=>{
     const plays=game.drives.filter(d=>d.offensiveTeam==='NCS').flatMap(d=>d.plays);
