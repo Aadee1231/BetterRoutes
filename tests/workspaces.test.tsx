@@ -53,6 +53,19 @@ describe('Coordinator URL workspace',()=>{
   });
 });
 describe('reproducible What-If interaction',()=>{
+  it('renders paired model-only 500-run summaries, and invalidates them when the seed changes',async()=>{
+    await go('#/whatif?play=drive-13-row-07&seed=42');render(<App/>);
+    await click('Run 500 simulations');
+    await waitFor(()=>expect(document.querySelectorAll('.batch-table tbody tr')).toHaveLength(2),{timeout:15000});
+    const rows=[...document.querySelectorAll('.batch-table tbody tr')];
+    expect(rows[0].textContent).toContain('Alternative: Inside Zone');
+    expect(rows[1].textContent).toContain('Actual call category: RUN (model)');
+    expect([...rows[0].querySelectorAll('td')].map(td=>td.textContent)).toEqual([...rows[1].querySelectorAll('td')].map(td=>td.textContent));
+    expect(document.querySelectorAll('.position-track svg text')).toHaveLength(0);
+    expect(document.querySelector('.track-key')!.textContent).toContain('S sack');
+    await act(async()=>{fireEvent.change(screen.getByRole('spinbutton',{name:'Seed'}),{target:{value:'1'}});});
+    expect(document.querySelector('.batch-table')).toBeNull();
+  },20000);
   it('runs, continues, resets, replays the same sequence and restores it from the URL',async()=>{
     await go('#/whatif?play=drive-13-row-07&seed=42');const view=render(<App/>);
     expect(screen.getByRole('button',{name:'Continue Drive'}).hasAttribute('disabled')).toBe(true);
@@ -64,7 +77,7 @@ describe('reproducible What-If interaction',()=>{
     await click('Continue Drive');
     expect(screen.getByTestId('simulation-result').textContent).toContain('2 plays');
     await click('Sim to End');
-    expect(screen.getByTestId('simulation-result').textContent).toContain('punt');
+    expect(screen.getByTestId('simulation-result').textContent).toContain('Punt');
     expect(screen.getByRole('button',{name:'Continue Drive'}).hasAttribute('disabled')).toBe(true);
     const log=document.querySelector('.simulation-log')!.textContent;
     const result=screen.getByTestId('simulation-result').textContent;
@@ -88,7 +101,7 @@ describe('reproducible What-If interaction',()=>{
     await act(async()=>{fireEvent.change(screen.getByRole('spinbutton',{name:'Seed'}),{target:{value:'1'}});});
     expect(screen.getByTestId('simulation-result').textContent).toContain('0 plays');
     await click('Sim to End');expect(document.querySelector('.simulation-log')!.textContent).not.toBe(old);
-    expect(screen.getByTestId('simulation-result').textContent).toContain('turnover');
+    expect(screen.getByTestId('simulation-result').textContent).toContain('Turnover');
     await act(async()=>{fireEvent.change(screen.getByRole('spinbutton',{name:'Seed'}),{target:{value:'42'}});});
     await click('Sim to End');expect(document.querySelector('.simulation-log')!.textContent).toBe(old);
     await click('New seed');

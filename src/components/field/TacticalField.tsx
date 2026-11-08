@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { PlayTemplate } from '../plays/templates';
+import { ballPosition, flightArc, playerPosition, type Point } from '../plays/motion';
 
 export interface TacticalFieldProps {
   ballYardline:number;lineToGain?:number|null;goalToGo?:boolean;kick?:boolean;
@@ -9,15 +10,6 @@ export interface TacticalFieldProps {
 }
 const clamp=(n:number)=>Math.max(0,Math.min(100,n));
 const x=(yardline:number)=>(clamp(yardline)+10)*10;
-function along(points:readonly (readonly [number,number])[],t:number):readonly [number,number] {
-  const lengths=points.slice(1).map((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1]));
-  let remaining=lengths.reduce((a,b)=>a+b,0)*Math.max(0,Math.min(1,t));
-  for (let i=0;i<lengths.length;i++) {
-    if (remaining<=lengths[i]) {const f=lengths[i]?remaining/lengths[i]:0;return [points[i][0]+(points[i+1][0]-points[i][0])*f,points[i][1]+(points[i+1][1]-points[i][1])*f];}
-    remaining-=lengths[i];
-  }
-  return points.at(-1)??[0,0];
-}
 
 export function TacticalField({ballYardline,lineToGain,goalToGo=false,kick=false,template,animatedResult,playId,showDefense=false,schematicMotion=false,autoPlay=false,replayKey=0,onPlaybackEnd,resultSource='official'}:TacticalFieldProps) {
   const id=useId().replaceAll(':','');
@@ -45,13 +37,12 @@ export function TacticalField({ballYardline,lineToGain,goalToGo=false,kick=false
   const current=clamp(ballYardline+(end-ballYardline)*progress);
   const los=x(ballYardline);
   const routePoint=([dx,dy]:readonly [number,number])=>`${Math.max(16,Math.min(1184,los+dx*10))},${266.5+dy*10}`;
-  const target=template?.players.find(p=>p.target);
-  const ballPath=template?.kind==='run'?template.lane:template?.kind==='kick'?template.lane:[[-5,0],...(target?.route??[[0,0]])] as readonly (readonly [number,number])[];
-  const ball=schematicMotion&&ballPath?along(ballPath,template?.kind==='pass'?Math.max(0,(progress-.2)/.8):progress):[current-ballYardline,0];
+  const project=([dx,dy]:Point):Point=>[(Math.max(16,Math.min(1184,los+dx*10))-los)/10,dy];
+  const ball=schematicMotion&&template?ballPosition(template,progress,project):[current-ballYardline,0];
   const ballX=schematicMotion?Math.max(16,Math.min(1184,los+ball[0]*10)):x(current);
-  const ballY=schematicMotion?266.5+ball[1]*10-(template?.kind==='pass'||template?.kind==='kick'?Math.sin(Math.PI*progress)*65:0):266.5;
+  const ballY=schematicMotion?266.5+ball[1]*10:266.5;
   const calloutWidth=Math.min(1000,Math.max(280,(animatedResult?.label.length??0)*10+28));
-  return <div className="field-player" data-play-id={playId} data-concept={template?.concept}>
+  return <div className="field-player" data-play-id={playId} data-concept={template?.concept} data-progress={progress}>
     <svg className="tactical-field" viewBox="0 0 1200 533" role="img" aria-label={`Football field. Ball at ${ballYardline}, ${schematicMotion?'schematic illustration':animatedResult?`${resultSource} replay available`:'schematic illustration'}.`}>
       <defs><marker id={`${id}-route`} markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0 0 6 3 0 6" fill="none" stroke="#f1f0ec" strokeWidth="1.4"/></marker><marker id={`${id}-run`} markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto"><path d="M0 0 5 3 0 6" fill="#cc3039"/></marker></defs>
       <rect width="1200" height="533" fill="#244837"/>
@@ -69,9 +60,9 @@ export function TacticalField({ballYardline,lineToGain,goalToGo=false,kick=false
       {showDefense&&[-18,-9,-3,3,9,18].map((dy,i)=><path key={dy} d={`M${los+(i%2?35:65)-6} ${266.5+dy*10-6}l12 12m0 -12l-12 12`} stroke="#c2c9c5" strokeWidth="3"/>)}
       {template&&<g className="schematic">
         {template.players.filter(p=>p.route).map((p,i)=><path key={i} d={`M${routePoint([p.x,p.y])} ${p.route!.map(point=>'L'+routePoint(point)).join(' ')}`} fill="none" stroke="#f1f0ec" strokeOpacity={p.target?0.9:0.5} strokeWidth={p.target?3:2} markerEnd={`url(#${id}-route)`}/>)}
-        {template.lane&&<path d={`M${template.lane.map(routePoint).join(' L')}`} fill="none" stroke={template.kind==='run'?'#cc3039':'#f1f0ec'} strokeWidth={template.kind==='run'?8:3} strokeDasharray={template.kind==='kick'?'8 6':undefined} markerEnd={`url(#${id}-${template.kind==='run'?'run':'route'})`}/>}
-        {template.kind==='pass'&&template.players.find(p=>p.target)?.route&&(()=>{const target=template.players.find(p=>p.target)!.route!.at(-1)!;return <path d={`M${routePoint([-5,0])} Q${los+50} 160 ${routePoint(target)}`} fill="none" stroke="#d6c8b0" strokeDasharray="7 6" strokeWidth="2.5"/>;})()}
-        {template.players.map((p,i)=>{const points=p.route?[[p.x,p.y] as const,...p.route]:p.position==='RB'&&template.kind==='run'?template.lane:undefined;const position=points?along(points,progress):[p.x,p.y] as const;return <g key={i} data-player={p.position} transform={`translate(${routePoint(position)})`}><circle r="11" fill="#cc3039" stroke="#f1f0ec" strokeWidth="1.2"/><text textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="9" fontFamily="IBM Plex Sans Condensed">{p.position}</text></g>;})}
+        {template.lane&&template.kind==='run'&&<path d={`M${template.lane.map(routePoint).join(' L')}`} fill="none" stroke="#cc3039" strokeWidth="8" markerEnd={`url(#${id}-run)`}/>}
+        {(template.kind==='pass'||template.kind==='kick')&&(()=>{const [start,control,end]=flightArc(template);return <path data-testid="ball-flight-arc" d={`M${routePoint(start)} Q${routePoint(control)} ${routePoint(end)}`} fill="none" stroke="#d6c8b0" strokeDasharray="7 6" strokeWidth="2.5"/>;})()}
+        {template.players.map((p,i)=><g key={i} data-player={p.position} transform={`translate(${routePoint(playerPosition(template,p,progress,project))})`}><circle r="11" fill="#cc3039" stroke="#f1f0ec" strokeWidth="1.2"/><text textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="9" fontFamily="IBM Plex Sans Condensed">{p.position}</text></g>)}
       </g>}
       {progress>0&&!schematicMotion&&<line x1={los} x2={x(current)} y1="266.5" y2="266.5" stroke="#f1f0ec" strokeOpacity="0.65" strokeWidth="3" strokeDasharray="5 5"/>}
       <g data-testid="field-ball" data-yardline={ballYardline} data-current-yardline={current.toFixed(2)} transform={`translate(${ballX} ${ballY}) scale(1.5)`}><ellipse rx="9" ry="6" transform="rotate(-25)" fill="#d7b48a" stroke="#171b17" strokeWidth="2"/><path d="M-4 0h8m-2 -2v4m-2 -4v4m-2 -4v4" stroke="#fff" strokeWidth="1"/></g>

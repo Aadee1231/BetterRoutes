@@ -9,4 +9,4 @@ export function endPosition(play:HistoricalPlay):number {
   const last=matches.at(-1);
   return last?(last[1]==='NCSU'?Number(last[2]):100-Number(last[2])):play.yardline??25;
 }
-export const resultLabel=(result:string)=>({FG:'Field goal',PUNT:'Punt',DOWNS:'Downs',FGA:'Blocked FG–TD','turnover-on-downs':'Downs','blocked-fg-return-touchdown':'Blocked FG–TD','field-goal-good':'FG good','drive-start':'Drive start','first-down':'First down','no-play':'No play'}[result]??result.replaceAll('-',' '));
+export const resultLabel=(result:string)=>({FG:'Field goal',PUNT:'Punt',punt:'Punt',DOWNS:'Downs',downs:'Downs',touchdown:'Touchdown',turnover:'Turnover',safety:'Safety','half-end':'Half ended','game-end':'Game ended','play-cap':'Play cap',FGA:'Blocked FG–TD','turnover-on-downs':'Downs','blocked-fg-return-touchdown':'Blocked FG–TD','field-goal-made':'Field goal','field-goal-missed':'Missed FG','field-goal-good':'Field goal','drive-start':'Drive start','first-down':'First down','no-play':'No play'}[result]??result.replaceAll('-',' ').replace(/^./,c=>c.toUpperCase()));

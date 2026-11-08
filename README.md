@@ -3,12 +3,18 @@
 **Football Offensive Intelligence & Decision Analysis**
 Analyze the game. Challenge the call.
 
+## Concept
+
+A college student, frustrated by NC State's 41–3 loss to Duke, builds an offensive coordinator to review the real calls, challenge alternatives and sample hypothetical drives. **BetterRoutes** is film-room analysis software, not a football video game or a claim that another play would certainly have won. Historical facts, calculated estimates and model samples remain distinct.
+
+**No trained ML model is implemented.** No CollegeFootballData (CFBD) API key was available, and one game is insufficient for credible model training. This is a statistical coordinator only: observed samples plus explicit heuristic priors. No credentials are required to run it.
+
 React + TypeScript + Vite application with verified local game data, repeatable ingestion, interactive Game Review and Coordinator workspaces, and a seeded What-If drive simulator. This is a Data-Assisted Coordinator project, not a trained ML model. See [DEMO.md](DEMO.md) for a reproducible real-play recording flow using seed 42.
 
 ## Commands
 
 ```sh
-npm install
+npm ci
 npm run dev
 npm test
 npm run typecheck
@@ -20,6 +26,8 @@ npm run ingest -- --offline # rebuilds JSON using committed raw HTML; no network
 
 The browser uses `src/data/index.ts`, which runtime-validates the local JSON with Zod. No credentials or remote requests are needed to launch the app. The ingestion parser and Cheerio are development-only and are not imported by React. Shared schemas/types are in `src/types/`; source parsing is in `scripts/parser.ts`, independent from rendering. `src/data/integrity.ts` compares play-derived totals against both official team tables.
 
+Architecture: Vite + React + TypeScript and plain CSS, self-hosted IBM Plex fonts, no router/UI/animation dependency. `src/pages/` owns the three workspaces; `src/utils/scenarios.ts` owns URL serialization and official situation loading; `src/components/plays/{templates,motion}.ts` supplies schematic geometry and synchronized possession/flight phases; `src/components/field/` renders reusable SVG fields and non-overlapping position tracks. `src/engine/` is pure TypeScript for evidence, recommendations and immutable seeded simulation. `src/engine/batch.ts` yields after every four paired seed trials; cancellation prevents stale batch results when inputs change. `tests/` runs data integrity, engine, UI, motion and batch checks under Vitest.
+
 ## Game Review workspace
 
 Hash routes require no server routing configuration. Open `#/review?drive=drive-13&play=drive-13-row-07` to restore the real fourth-and-one selection. Drive rows, play rows and Key Decisions select the replay; left/right arrows step through the selected drive. Analyze This Play carries the source play ID into the Coordinator. Its editable situation, strategy and selected candidate persist in the URL. What-If (`#/whatif`) additionally preserves the seed and sampled play count/end-of-drive state; replay does not draw new outcomes. Actual historical data and hypothetical model output are visually separated, including their position tracks and comparison columns. Editing the historical starting situation marks it custom and warns against a like-for-like interpretation.
@@ -30,6 +38,7 @@ The SVG field animates official start-to-end ball progression, not reconstructed
 
 - [NC State official box score](https://gopack.com/sports/football/stats/2026/duke/boxscore/24545)
 - [Duke official box score](https://goduke.com/sports/football/stats/2026/nc-state/boxscore/24830)
+- [NC State official postgame report](https://gopack.com/news/2026/11/7/football-wolfpack-offense-stalls-in-41-3-loss-to-duke) supplies factual summary context; the two box scores supply the normalized tables and play records.
 - Raw HTML: `scripts/raw/gopack.html`, `scripts/raw/goduke.html`.
 - Normalized dataset: `src/data/game.json`. November 7, 2026, Carter-Finley Stadium, attendance 56,919.
 - All 11 NC State possessions, 85 original panel rows, 56 counted offensive plays. All 70 Duke scrimmage plays are available as separately labeled opponent evidence; nine quarter-spanning plays come from embedded Nuxt records because their rendered panels omit continuations. Duke totals cross-check exactly: 461 yards = 223 pass + 238 rush. Includes both official teams' statistics, NC State passing/rushing/receiving player tables and the complete scoring summary.
@@ -67,6 +76,18 @@ Every heuristic constant is tagged `source: 'assumption'` in `src/engine/priors.
 
 Utility combines success, expected yards, variance/turnover/sack risk, explosive rate and score/quarter/field-position terms. Strategy changes real weights and fourth-down willingness. Fourth-down comparisons add an assumed field-value/expected-points-ish heuristic, not a validated EP model. Punts and FG are legal only on fourth down. FG distance is yards to goal + 17, maximum 60; a generic declining distance curve estimates make probability. Punt net is assumed 38 yards capped at the opponent 20; punts inside opponent 35 are only available in conservative mode. Kick success/conversion displays are `n/a`; render `primaryMetric` instead: assumed net punt yards or assumed field-goal make chance. Internal probabilities remain available for simulation and ranking.
 
+### Strategy weights and concept selection
+
+Utility is `w_success × P(success) + w_yards × E[yards] − w_risk × risk + w_explosive × P(15+ yards)`, plus fourth-down expected-points-ish and situational terms. Weights are assumptions in `src/engine/priors.ts`, not fitted parameters:
+
+| Strategy | Success | Yards | Risk | Explosive | Fourth-down go / kick |
+|---|---:|---:|---:|---:|---:|
+| Balanced | 2 | .055 | .9 | .15 | 0 / 0 |
+| Aggressive | 1.8 | .09 | .4 | .7 | .75 / −.2 |
+| Conservative | 2.2 | .025 | 1.8 | 0 | −.6 / 1 |
+
+Short yardage selects Inside Zone/Power or Quick Slant; long yardage can select Draw, Screen, Mesh, Play-Action Cross or Deep Shot according to down and strategy. Outside Zone is available for normal early field position. Concept selection is rule-based; all concepts within RUN/PASS share their category's observed/prior distribution, not invented concept-specific effectiveness.
+
 ### Simulation assumptions
 
 Mulberry32 provides one deterministic draw per play with PRNG state saved in `SimulationState`. RUN/PASS sample the shrunk outcome mixture, not guaranteed favorable scripts. Concepts within the same category share outcome evidence. Turnovers end possession; no opponent drive is simulated. Touchdowns add 7 including an assumed made PAT; safeties add 2 to the defense. First downs reset to ten or goal-to-go, with goal-to-go preserved through losses. Coordinates clamp to 0–100 and terminal states retain legal down/distance (at least one yard even at the goal-line sentinel).
@@ -74,5 +95,18 @@ Mulberry32 provides one deterministic draw per play with PRNG state saved in `Si
 Run/sack/turnover runoff is 30 seconds, completed pass 24, incomplete pass 8 and kicks 8. No timeouts, penalties, kickoffs or defensive possessions are simulated; blocked FG returns are historical-only. Drives cross Q1→Q2 and Q3→Q4 but stop at halftime/fulltime, possession change or a configurable play cap (default 30 total plays). Score on the final play takes precedence over the clock ending. Seed, starting situation, strategy, evidence and selected calls must all match for replay.
 
 ## Tooling
+
+### Repeated simulations
+
+What-If's **Run 500 simulations** compares the chosen first concept with the actual call's category under the **same model, start, strategy and seeds**. Each trial first advances Mulberry32's seed state from the current seed, samples that initial call, then lets the coordinator finish the drive. It never treats the one real historical result as a measured success rate. Equal category choices can return identical distributions; that is intentional. Counts include TD, FG, punt, downs, turnover, missed FG and Other (safety/clock expiry/play cap); percentages are whole numbers and can round away from 100%. Average points are NC State points added, including assumed PATs. Chunked execution yields to the browser after four paired trials. Changing inputs clears old results.
+
+### Known limitations
+
+- A single game, sparse buckets and heuristic priors cannot establish causal outcomes or calibrated season probabilities. No trained ML or CFBD dataset.
+- No inferred tracking, concept-specific measured effectiveness, defensive possessions, coaching timeouts or full-game simulation. Schematic snap/handoff/fake/flight/catch motion is illustrative only; historical and hypothetical yardage playback remains authoritative for its own source.
+- No simulated penalties, blocked-kick returns, injuries, personnel matchups, weather or opponent adjustment beyond downweighted Duke observations. Fixed runoff, assumed PAT and simple FG/punt heuristics are simplifications.
+- Percentage rounding can hide small differences. Model-vs-model batch rates are not historical rates or confidence intervals.
+- The application is desktop-first. Dense play logs scroll within their panels. Reload restores scenario/sampled progression, not the transient animation frame or a completed 500-run table; rerun the deterministic batch.
+- Production builds emit third-party Zod annotation and >500 kB bundle advisories; these are not test/build failures. No backend, authentication, external service signup or deployment is needed.
 
 Vitest is upgraded to stable major 5. Vite prints harmless third-party Zod comment-annotation warnings during the production build.
