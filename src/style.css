@@ -1,0 +1,5 @@
+:root { font-family: Arial, sans-serif; color: #f1f0ec; background: #101214; font-synthesis: none; }
+body { margin: 0; }
+main { max-width: 1100px; margin: 0 auto; padding: 64px 32px; }
+h1 { font-size: 48px; border-bottom: 2px solid #cc3039; padding-bottom: 24px; }
+p { color: #a2a7ad; }
