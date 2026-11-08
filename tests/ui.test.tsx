@@ -23,11 +23,11 @@ describe('Game Review workspace',()=>{
     expect(screen.getByTestId('field-ball').getAttribute('data-yardline')).toBe('25');
     expect(screen.getAllByRole('button',{name:/Select drive/})).toHaveLength(11);
   });
-  it('navigates all three sections with honest unimplemented placeholders',async()=>{
+  it('navigates all three functional sections',async()=>{
     render(<App/>);
     fireEvent.click(screen.getByRole('link',{name:'Offensive Coordinator'}));
     await waitFor(()=>expect(screen.getByRole('heading',{name:'Offensive Coordinator'})).toBeTruthy());
-    expect(screen.getByText(/workspace is not yet connected/)).toBeTruthy();
+    expect(screen.getByRole('region',{name:'Situation editor'})).toBeTruthy();
     fireEvent.click(screen.getByRole('link',{name:'What-If Analysis'}));
     await waitFor(()=>expect(screen.getByRole('heading',{name:'What-If Analysis'})).toBeTruthy());
     fireEvent.click(screen.getByRole('link',{name:'Game Review'}));

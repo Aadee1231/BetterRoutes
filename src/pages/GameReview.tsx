@@ -5,16 +5,10 @@ import { SourceTag } from '../components/SourceTag';
 import { TacticalField } from '../components/field/TacticalField';
 import { ballOn, downDistance, endPosition, resultLabel, signed } from '../utils/football';
 import { type Route, routeUrl } from '../utils/navigation';
+import { decisions, DEMO_SEED, readWorkspace, workspaceUrl } from '../utils/scenarios';
 
 const reportUrl='https://gopack.com/news/2026/11/7/football-wolfpack-offense-stalls-in-41-3-loss-to-duke';
 const ncDrives=game.drives.filter(d=>d.offensiveTeam==='NCS');
-const decisions=[
-  {id:'drive-13-row-07',title:'The yard that never came',note:'4th & 1 · NCS 40 · 0 yards'},
-  {id:'drive-10-row-10',title:'The kick that came back',note:'50-yard FG blocked · return TD'},
-  {id:'drive-11-row-04',title:'An empty start to the second half',note:'3rd & 2 · NCS 33 · incomplete'},
-  {id:'drive-17-row-09',title:'The pocket closes',note:'3rd & 14 · NCS 33 · sack, −9'},
-  {id:'drive-21-row-07',title:'One last fourth down',note:'4th & 2 · DUK 18 · incomplete'},
-];
 function Linescore() {
   const quarters={NCS:[0,0,0,0],DUK:[0,0,0,0]};
   let before={NCS:0,DUK:0};
@@ -57,7 +51,7 @@ export function GameReview({route}:{route:Route}) {
   const drive=ncDrives.find(d=>d.id===(requestedPlay?.driveId??route.drive))??ncDrives[0];
   const selected=requestedPlay??drive.plays.find(p=>p.offensivePlay)??drive.plays[0];
   const index=drive.plays.findIndex(p=>p.id===selected.id);
-  const selectPlay=(play:HistoricalPlay)=>{window.location.hash=routeUrl('review',play.driveId,play.id);};
+  const selectPlay=(play:HistoricalPlay)=>{window.location.hash=routeUrl('review',play.driveId,play.id,{seed:String(DEMO_SEED)});};
   const selectDrive=(d:Drive)=>selectPlay(d.plays.find(p=>p.offensivePlay)??d.plays[0]);
   useEffect(()=>{
     const key=(event:KeyboardEvent)=>{
@@ -87,7 +81,7 @@ export function GameReview({route}:{route:Route}) {
           </div><div className="play-context"><div className="context-heading"><span>SELECTED PLAY</span><span className="mono">{String(index+1).padStart(2,'0')} / {drive.plays.length}</span></div>
           <div className="selected-description"><span className={`result-tag ${selected.result==='turnover-on-downs'||selected.result==='blocked-fg-return-touchdown'?'critical':''}`}>{resultLabel(selected.result)}</span><p>{selected.description}</p></div>
           <dl className="play-facts"><div><dt>Official gain</dt><dd>{selected.offensivePlay?`${signed(selected.yards)} yards`:'Special teams / admin'}</dd></div><div><dt>Drive ended</dt><dd>{resultLabel(drive.result)}</dd></div><div><dt>Evidence</dt><dd>{selected.nullified?'Nullified — no play':selected.offensivePlay?'Counted scrimmage play':selected.counts?'Special teams':'Administrative row'}</dd></div></dl>
-          <div className="analysis-action"><span className="micro-note">{selected.result==='blocked-fg-return-touchdown'?'Return ends at the NC State goal. Kick flight and return path are not modeled.':!selected.offensivePlay?'Special teams and administrative rows are retained for context.':'Historical ball progression only. No inferred routes or player tracking.'}</span>{selected.offensivePlay?<a className="button primary" href={routeUrl('coordinator',drive.id,selected.id)}>Analyze This Play <span aria-hidden="true">→</span></a>:<button className="button" disabled>Analysis: scrimmage plays only</button>}</div>
+          <div className="analysis-action"><span className="micro-note">{selected.result==='blocked-fg-return-touchdown'?'Return ends at the NC State goal. Kick flight and return path are not modeled.':!selected.offensivePlay?'Special teams and administrative rows are retained for context.':'Historical ball progression only. No inferred routes or player tracking.'}</span>{selected.offensivePlay?<a className="button primary" href={workspaceUrl('coordinator',readWorkspace({section:'coordinator',drive:drive.id,play:selected.id}))}>Analyze This Play <span aria-hidden="true">→</span></a>:<button className="button" disabled>Analysis: scrimmage plays only</button>}</div>
           </div></div>
         </section>
         <section className="pbp-panel" aria-label="Official play-by-play"><div className="panel-heading"><h2>Drive log <span className="muted">/</span> Q{drive.startQuarter} {drive.startClock} · {ballOn(drive.startYardline)} · {drive.officialPlays} plays · {signed(drive.netYards)} yd · {resultLabel(drive.result)}</h2><div className="play-navigation"><button aria-label="Previous play" disabled={index===0} onClick={()=>selectPlay(drive.plays[index-1])}>←</button><span className="mono">{index+1}/{drive.plays.length}</span><button aria-label="Next play" disabled={index===drive.plays.length-1} onClick={()=>selectPlay(drive.plays[index+1])}>→</button></div></div><div className="pbp-provenance"><SourceTag/><span>← / → to step through plays</span></div>

@@ -3,7 +3,7 @@
 **Football Offensive Intelligence & Decision Analysis**
 Analyze the game. Challenge the call.
 
-React + TypeScript + Vite application with verified local game data, repeatable ingestion, an interactive Game Review, a statistical recommendation engine and a seeded immutable drive simulator. Coordinator and What-If screens are explicitly labeled placeholders for the next stage. This is a Data-Assisted Coordinator project, not a trained ML model.
+React + TypeScript + Vite application with verified local game data, repeatable ingestion, interactive Game Review and Coordinator workspaces, and a seeded What-If drive simulator. This is a Data-Assisted Coordinator project, not a trained ML model. See [DEMO.md](DEMO.md) for a reproducible real-play recording flow using seed 42.
 
 ## Commands
 
@@ -22,7 +22,7 @@ The browser uses `src/data/index.ts`, which runtime-validates the local JSON wit
 
 ## Game Review workspace
 
-Hash routes require no server routing configuration. Open `#/review?drive=drive-13&play=drive-13-row-07` to restore the real fourth-and-one selection. Drive rows, play rows and Key Decisions select the replay; left/right arrows step through the selected drive. Analyze This Play carries the source play ID into the Coordinator placeholder.
+Hash routes require no server routing configuration. Open `#/review?drive=drive-13&play=drive-13-row-07` to restore the real fourth-and-one selection. Drive rows, play rows and Key Decisions select the replay; left/right arrows step through the selected drive. Analyze This Play carries the source play ID into the Coordinator. Its editable situation, strategy and selected candidate persist in the URL. What-If (`#/whatif`) additionally preserves the seed and sampled play count/end-of-drive state; replay does not draw new outcomes. Actual historical data and hypothetical model output are visually separated, including their position tracks and comparison columns. Editing the historical starting situation marks it custom and warns against a like-for-like interpretation.
 
 The SVG field animates official start-to-end ball progression, not reconstructed player tracking. Play/pause, replay, reset and 0.5×/1×/2× controls are local. The field and situation strip form a self-contained responsive block. All 11 schematic playbook templates are reusable data in `src/components/plays/templates.ts`; any displayed template is stamped as an illustration. Historical panels link to the official source. IBM Plex fonts are self-hosted through Fontsource.
 
