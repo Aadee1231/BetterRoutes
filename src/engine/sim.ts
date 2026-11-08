@@ -47,7 +47,14 @@ export function advanceSituation(input:GameSituation,outcome:ResolvedOutcome,com
     else {s.quarter+=1;remaining=900+remaining;}
   }
   s.clock=formatClock(Math.max(0,remaining));
-  return {situation:normalizeSituation(s),result,converted,runoff};
+  const after=normalizeSituation(s);
+  if(result&&(s.yardline===0||s.yardline===100)){
+    after.yardline=s.yardline;
+    const goal=Math.max(1,100-after.yardline);
+    after.distance=s.goalToGo?goal:Math.min(after.distance,goal);
+    after.goalToGo=after.distance===goal;
+  }
+  return {situation:after,result,converted,runoff};
 }
 function sample(distribution:readonly WeightedOutcome[],value:number):ResolvedOutcome {
   let cumulative=0;
@@ -71,7 +78,8 @@ export function simulatePlay(state:SimulationState,choice:Action|Concept,evidenc
     {kind:random.value<candidate.success.value?'field-goal-made':'field-goal-missed',yards:0}:sample(candidate.distribution,random.value);
   const transition=advanceSituation({...state.currentSituation},outcome,action==='PASS'&&outcome.kind==='gain');
   const after=transition.situation;
-  const play={order:state.plays.length+1,action,concept,before:{...state.currentSituation},after:{...after},yards:outcome.yards,outcome:transition.result??outcome.kind,converted:transition.converted};
+  const yards=(action==='RUN'||action==='PASS')&&outcome.kind!=='turnover'?after.yardline-state.currentSituation.yardline:outcome.yards;
+  const play={order:state.plays.length+1,action,concept,before:{...state.currentSituation},after:{...after},yards,outcome:transition.result??outcome.kind,converted:transition.converted};
   return freeze({...state,currentSituation:{...after},rngState:random.state,plays:[...state.plays,play],runningScore:{offense:after.offensiveScore,defense:after.defensiveScore},driveResult:transition.result,complete:transition.result!==null});
 }
 export function continueDrive(state:SimulationState,evidence:Evidence={plays:[]},playCap:number=PRIORS.playCap.value):SimulationState {

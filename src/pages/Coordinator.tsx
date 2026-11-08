@@ -27,7 +27,7 @@ export function Coordinator({route}:{route:Route}) {
   const edit=(patch:Partial<GameSituation>)=>change({situation:normalizeSituation({...s,...patch,goalToGo:false})});
   const official=w.source?officialSituation(w.source):undefined;
   const custom=!official||JSON.stringify(official)!==JSON.stringify(s);
-  const select=(id:string)=>{const source=historicalPlay(id);if(source)change({source,situation:officialSituation(source)});};
+  const select=(id:string)=>{if(!id){change({source:undefined});return;}const source=historicalPlay(id);if(source)change({source,situation:officialSituation(source)});};
   const endpoint=template.lane?.at(-1)?.[0]??template.players.find(p=>p.target)?.route?.at(-1)?.[0]??10;
   return <div className="coordinator-page"><div className="page-kicker"><span>Decision room / 02</span><span>Statistical coordinator · not a trained ML model</span></div>
     <div className="workspace-title"><h1>Offensive Coordinator</h1><label>Load situation <select aria-label="Load situation" value={w.source?.id??''} onChange={e=>select(e.target.value)}><option value="">Custom situation</option>{decisions.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select></label></div>

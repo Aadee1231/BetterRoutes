@@ -10,6 +10,34 @@ const click=async(name:string|RegExp)=>{await act(async()=>{fireEvent.click(scre
 beforeEach(()=>window.history.replaceState(null,'','/'+base));
 afterEach(cleanup);
 describe('Coordinator URL workspace',()=>{
+  it('detaches a loaded official source into a persistent custom situation without changing inputs',async()=>{
+    await go('#/coordinator?play=drive-10-row-10&seed=42');const view=render(<App/>);
+    const values=()=>['To go','Field position','NC State score','Duke score'].map(name=>(screen.getByRole('spinbutton',{name}) as HTMLInputElement).value);
+    const before=values();const field=document.querySelector('.workspace-situation')!.textContent;
+    await act(async()=>{fireEvent.change(screen.getByRole('combobox',{name:'Load situation'}),{target:{value:''}});});
+    expect((screen.getByRole('combobox',{name:'Load situation'}) as HTMLSelectElement).value).toBe('');
+    expect(values()).toEqual(before);expect(document.querySelector('.workspace-situation')!.textContent).toBe(field);
+    expect(window.location.hash).not.toContain('play=');expect(window.location.hash).not.toContain('drive=');
+    expect(screen.getByText(/Custom situation · load an official/)).toBeTruthy();
+    expect(screen.queryByText('Source play: drive-10-row-10')).toBeNull();
+    view.unmount();render(<App/>);expect(values()).toEqual(before);
+    expect((screen.getByRole('combobox',{name:'Load situation'}) as HTMLSelectElement).value).toBe('');
+  });
+  it('clamps URL and editor boundary inputs to playable down/distance/field position',async()=>{
+    await go('#/coordinator?down=4&toGo=99&yardline=100&seed=42');render(<App/>);
+    expect((screen.getByRole('spinbutton',{name:'Field position'}) as HTMLInputElement).value).toBe('99');
+    expect((screen.getByRole('spinbutton',{name:'To go'}) as HTMLInputElement).value).toBe('1');
+    expect(document.querySelector('.workspace-situation')!.textContent).toContain('4th & Goal · DUK 1');
+    await act(async()=>{fireEvent.change(screen.getByRole('spinbutton',{name:'Field position'}),{target:{value:'0'}});});
+    expect((screen.getByRole('spinbutton',{name:'Field position'}) as HTMLInputElement).value).toBe('1');
+    expect(window.location.hash).toContain('yardline=1&');
+    await act(async()=>{fireEvent.change(screen.getByRole('spinbutton',{name:'Field position'}),{target:{value:'100'}});});
+    expect(window.location.hash).toContain('yardline=99&');expect(window.location.hash).toContain('toGo=1&');
+    await go('#/coordinator?down=-1&toGo=999&yardline=0');
+    expect(screen.getByRole('button',{name:'Down 1'}).getAttribute('aria-pressed')).toBe('true');
+    expect((screen.getByRole('spinbutton',{name:'Field position'}) as HTMLInputElement).value).toBe('1');
+    expect((screen.getByRole('spinbutton',{name:'To go'}) as HTMLInputElement).value).toBe('99');
+  });
   it('recomputes on inputs, changes rankings with strategy and restores the official situation',async()=>{
     render(<App/>);
     const initial=screen.getByTestId('candidate-ranking').textContent;
@@ -53,6 +81,14 @@ describe('Coordinator URL workspace',()=>{
   });
 });
 describe('reproducible What-If interaction',()=>{
+  it('shows capped touchdown yards consistently in the log, comparison and field overlay',async()=>{
+    await go('#/whatif?play=drive-13-row-07&down=1&toGo=2&yardline=98&candidate=Inside+Zone&seed=1');render(<App/>);
+    await click('Run Hypothetical Play');
+    expect(document.querySelector('.simulation-log')!.textContent).toContain('+2');
+    expect(document.querySelector('.comparison-table')!.textContent).toContain('+2 yd · Touchdown');
+    await waitFor(()=>expect(document.querySelector('.field-callout')!.textContent).toBe('+2 YD · TOUCHDOWN'));
+    expect(screen.getByTestId('simulation-result').textContent).toContain('Touchdown');
+  });
   it('renders paired model-only 500-run summaries, and invalidates them when the seed changes',async()=>{
     await go('#/whatif?play=drive-13-row-07&seed=42');render(<App/>);
     await click('Run 500 simulations');

@@ -23,7 +23,7 @@ export const successThreshold = (s:Pick<GameSituation,'down'|'distance'>) => s.d
 const finite = (n:number,fallback:number) => Number.isFinite(n)?n:fallback;
 const clamp = (n:number,min:number,max:number) => Math.max(min,Math.min(max,n));
 export function normalizeSituation(input: GameSituation): GameSituation {
-  const yardline = clamp(Math.round(finite(input.yardline,25)),0,100);
+  const yardline = clamp(Math.round(finite(input.yardline,25)),1,99);
   const goal = Math.max(1,100-yardline);
   const distance = clamp(Math.round(finite(input.distance,10)),1,goal);
   const clock = /^\d{2}:[0-5]\d$/.test(input.clock)?input.clock:'15:00';

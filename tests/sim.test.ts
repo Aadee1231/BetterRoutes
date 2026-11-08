@@ -38,6 +38,31 @@ describe('immutable drive simulator',()=>{
     expect(()=>simulatePlay(createSimulation({...s,down:1}),'PUNT',evidence)).toThrow('Illegal');
     expect(()=>simulatePlay(createSimulation(s),'FIELD_GOAL',evidence)).toThrow('Illegal');
   });
+  it('records only physical scrimmage yardage at touchdowns and safeties',()=>{
+    const td=simulatePlay(createSimulation({...s,down:1,distance:2,yardline:98,goalToGo:true},'balanced',1),'Inside Zone',evidence);
+    expect(td).toMatchObject({driveResult:'touchdown',complete:true,currentSituation:{yardline:100}});
+    expect(td.plays[0]).toMatchObject({yards:2,before:{yardline:98},after:{yardline:100},converted:true});
+    let safety=false;
+    for(let seed=0;seed<100;seed++){
+      const result=simulatePlay(createSimulation({...s,down:1,distance:10,yardline:1},'balanced',seed),'PASS',evidence);
+      if(result.driveResult==='safety'){
+        expect(result.plays[0]).toMatchObject({yards:-1,before:{yardline:1},after:{yardline:0}});
+        safety=true;
+      }
+    }
+    expect(safety).toBe(true);
+  });
+  it('normalizes playable engine starts away from goal lines and clamps down/distance',()=>{
+    for(const yardline of [-10,0,1,98,99,100,120]){
+      const initial=createSimulation({...s,down:9,distance:99,yardline});
+      const normalized=initial.currentSituation;
+      expect(normalized.yardline).toBe(Math.max(1,Math.min(99,yardline)));
+      expect(normalized.down).toBe(4);
+      expect(normalized.distance).toBe(Math.min(99,100-normalized.yardline));
+      expect(normalized.goalToGo).toBe(normalized.distance===100-normalized.yardline);
+      expect(recommend({...s,down:-1,distance:-99,yardline},'balanced',evidence).situation).toMatchObject({down:1,distance:1,yardline:normalized.yardline});
+    }
+  });
   it('applies clock runoff across quarters and stops at halftime/fulltime',()=>{
     expect(advanceSituation({...s,quarter:1,clock:'00:10',down:1},{kind:'gain',yards:1}).situation).toMatchObject({quarter:2,clock:'14:40'});
     expect(advanceSituation({...s,quarter:2,clock:'00:10',down:1},{kind:'gain',yards:1}).result).toBe('half-end');
@@ -84,8 +109,16 @@ describe('immutable drive simulator',()=>{
       const strategy=(['balanced','aggressive','conservative'] as Strategy[])[i%3];
       const initial=createSimulation(input,strategy,i);
       valid(initial.currentSituation);
+      expect(initial.currentSituation.yardline>=1&&initial.currentSituation.yardline<=99).toBe(true);
       const result=i%10===0?continueDrive(initial,evidence):simulatePlay(initial,recommend(initial.currentSituation,strategy,evidence).selected.concept,evidence);
-      for (const play of result.plays) {valid(play.before);valid(play.after);}
+      for (const play of result.plays) {
+        valid(play.before);valid(play.after);
+        if((play.action==='RUN'||play.action==='PASS')&&play.outcome!=='turnover'){
+          expect(play.after.yardline-play.before.yardline).toBe(play.yards);
+          expect(play.yards).toBeLessThanOrEqual(100-play.before.yardline);
+          expect(play.yards).toBeGreaterThanOrEqual(-play.before.yardline);
+        }
+      }
     }
     expect(normalizeSituation({...s,down:9,distance:-10,yardline:Infinity}).down).toBe(4);
   });
