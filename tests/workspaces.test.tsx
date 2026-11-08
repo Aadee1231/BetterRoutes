@@ -56,15 +56,35 @@ describe('reproducible What-If interaction',()=>{
   it('renders paired model-only 500-run summaries, and invalidates them when the seed changes',async()=>{
     await go('#/whatif?play=drive-13-row-07&seed=42');render(<App/>);
     await click('Run 500 simulations');
-    await waitFor(()=>expect(document.querySelectorAll('.batch-table tbody tr')).toHaveLength(2),{timeout:15000});
+    await waitFor(()=>expect(document.querySelectorAll('.batch-table tbody tr')).toHaveLength(3),{timeout:15000});
     const rows=[...document.querySelectorAll('.batch-table tbody tr')];
-    expect(rows[0].textContent).toContain('Alternative: Inside Zone');
-    expect(rows[1].textContent).toContain('Actual call category: RUN (model)');
-    expect([...rows[0].querySelectorAll('td')].map(td=>td.textContent)).toEqual([...rows[1].querySelectorAll('td')].map(td=>td.textContent));
+    expect(new Set(rows.map(row=>row.getAttribute('data-action')))).toEqual(new Set(['RUN','PASS','PUNT']));
+    const run=rows.find(row=>row.getAttribute('data-action')==='RUN')!;
+    expect(run.textContent).toContain('RUN / Inside Zone');
+    expect(run.textContent).toContain('ACTUAL CALL CATEGORY');
+    expect(run.textContent).toContain('SELECTED ALTERNATIVE');
+    expect(run.className).toBe('selected-alternative');
+    expect(rows.find(row=>row.getAttribute('data-action')==='PASS')!.textContent).toContain('PASS / Quick Slant');
+    expect(screen.getByText('Same category as the official call — the model does not separate concepts within a category, so their distributions match.')).toBeTruthy();
     expect(document.querySelectorAll('.position-track svg text')).toHaveLength(0);
     expect(document.querySelector('.track-key')!.textContent).toContain('S sack');
     await act(async()=>{fireEvent.change(screen.getByRole('spinbutton',{name:'Seed'}),{target:{value:'1'}});});
     expect(document.querySelector('.batch-table')).toBeNull();
+  },20000);
+  it('includes a legal FG category and marks a different selected category without a same-category note',async()=>{
+    await go('#/whatif?play=drive-13-row-07&yardline=60&candidate=Quick+Slant&seed=42');render(<App/>);
+    await click('Run 500 simulations');
+    await waitFor(()=>expect(document.querySelectorAll('.batch-table tbody tr')).toHaveLength(4),{timeout:15000});
+    const rows=[...document.querySelectorAll('.batch-table tbody tr')];
+    expect(new Set(rows.map(row=>row.getAttribute('data-action')))).toEqual(new Set(['RUN','PASS','PUNT','FIELD_GOAL']));
+    expect(document.querySelector('.batch-table .selected-alternative')!.getAttribute('data-action')).toBe('PASS');
+    expect(rows.find(row=>row.getAttribute('data-action')==='RUN')!.textContent).toContain('ACTUAL CALL CATEGORY');
+    expect(screen.queryByText(/Same category as the official call/)).toBeNull();
+    await go('#/whatif?play=drive-13-row-07&down=1&seed=42');
+    expect(document.querySelector('.batch-table')).toBeNull();
+    await click('Run 500 simulations');
+    await waitFor(()=>expect(document.querySelectorAll('.batch-table tbody tr')).toHaveLength(2),{timeout:15000});
+    expect(new Set([...document.querySelectorAll('.batch-table tbody tr')].map(row=>row.getAttribute('data-action')))).toEqual(new Set(['RUN','PASS']));
   },20000);
   it('runs, continues, resets, replays the same sequence and restores it from the URL',async()=>{
     await go('#/whatif?play=drive-13-row-07&seed=42');const view=render(<App/>);

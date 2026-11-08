@@ -6,7 +6,7 @@
 - Game Review: official linescore/team comparison, all NC State possessions, complete original play descriptions, selection and keyboard navigation, authoritative ball progression, Key Decisions and source-linked provenance.
 - Offensive Coordinator: editable down/distance/field position/quarter/clock/scores/strategy, immediate recommendations, selectable alternatives, model explanations/details, official reset and custom-situation warnings. Schematic snap, handoff, fake, throw, catch/run and kick animations use shared geometry, not reconstructed player tracking.
 - What-If: immutable seeded plays/drives, step/finish/replay/reset/new-seed controls, reload restoration, official rest-of-drive, readable position tracks with focusable tick details and legends, and consistently formatted comparisons. Actual and model numbers have distinct provenance tags.
-- Deterministic, chunked 500-drive summaries for the selected first concept and actual call's category under the same model/start/strategy/seeds. Whole-percent ending rates, average NC State points and explicitly model-vs-model labeling. No historical result is presented as a population rate. Four paired trials run per chunk; input changes cancel stale work.
+- Deterministic, chunked 500-drive summaries with one row per legal first-call category, using each category's recommended concept under the same model/start/strategy/seeds. The actual call's category is marked and the selected alternative's category is highlighted, with a same-category explanation when applicable. Whole-percent ending rates, average NC State points and explicitly model-vs-model labeling. No historical result is presented as a population rate. Four paired trials run per chunk; input changes cancel stale work.
 - Reproducible demo documented with seed 42 and alternate seeds 1 and 2026; portrait-crop guidance in `DEMO.md`.
 
 ## Sources successfully imported and historical coverage
@@ -35,7 +35,7 @@ Release command:
 npm ci && npm run validate:data && npm test && npm run build
 ```
 
-- Vitest: **6 test files, 58 tests passed**, covering source totals/chronology/provenance, recommendation legality/ranking/precision, seeded simulation rules/immutability and 3,000 random starts, UI controls/URL restoration, all 11 templates' ownership/flight/catch phases, batch reproducibility, cancellation/empty/error cases and paired summary UI invalidation.
+- Vitest: **6 test files, 59 tests passed**, covering source totals/chronology/provenance, recommendation legality/ranking/precision, seeded simulation rules/immutability and 3,000 random starts, UI controls/URL restoration, all 11 templates' ownership/flight/catch phases, batch reproducibility, cancellation/empty/error cases, legal category rows/marking and paired summary UI invalidation.
 - TypeScript and production build pass (`npm run build` runs `tsc -b && vite build`). Data integrity compares play totals with both official sources.
 - Playwright verification: all three screens checked at **1280×800, 1440×900 and 1920×1080**; no document overflow or console errors. Quick Slant ball was within 0.04 SVG units of its rendered arc mid-flight. During each paired 500-run batch the browser rendered 80+ frames; no observed long task, comfortably avoiding a 300ms blocking operation. Total batch wall time is not promised to be below 300ms.
 - Screenshots captured and inspected in `/home/ubuntu/shots/4/`, with viewport and full-page captures for `review`, `coordinator` (pass mid-flight) and `whatif` (finished seed-42 drive plus the 500-run summary), suffixed by width.
